@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Share for Tumblr</title>
+  <link rel="stylesheet" href="dialog.css">
+</head>
+<body>
+  <div id="app">
+
+    <header>
+      <div class="header-logo">t</div>
+      <h1>Image Share for Tumblr</h1>
+    </header>
+
+    <!-- Loading state -->
+    <div id="state-loading" class="state-panel">
+      <div class="spinner"></div>
+      <p>Loading…</p>
+    </div>
+
+    <!-- Not authenticated state -->
+    <div id="state-not-authed" class="state-panel hidden">
+      <p>You need to connect your Tumblr account before sharing.</p>
+      <button id="btn-open-options">Open Settings</button>
+    </div>
+
+    <!-- Error state -->
+    <div id="state-error" class="state-panel hidden">
+      <p id="error-message">An error occurred.</p>
+      <button id="btn-retry">Try Again</button>
+    </div>
+
+    <!-- Success state -->
+    <div id="state-success" class="state-panel hidden">
+      <div class="success-icon">✓</div>
+      <p id="success-message">Posted!</p>
+    </div>
+
+    <!-- Share form -->
+    <form id="share-form" class="hidden" novalidate>
+
+      <div class="image-preview">
+        <img id="preview-img" alt="Image to share">
+        <div id="preview-fallback" class="hidden">Image preview unavailable</div>
+      </div>
+
+      <div class="form-group">
+        <label for="blog-select">Post to blog</label>
+        <select id="blog-select" required></select>
+      </div>
+
+      <div class="form-group">
+        <label for="caption-input">Caption <span class="optional">(optional)</span></label>
+        <textarea id="caption-input" rows="4" placeholder="Add a caption…"></textarea>
+        <small>Supports basic HTML (&lt;b&gt;, &lt;i&gt;, &lt;a&gt;, etc.)</small>
+      </div>
+
+      <div class="form-group">
+        <label for="tags-input">Tags <span class="optional">(optional)</span></label>
+        <input type="text" id="tags-input" placeholder="nature, photography, art">
+        <small>Separate tags with commas</small>
+      </div>
+
+      <div class="form-group">
+        <label for="source-url">Source link</label>
+        <input type="url" id="source-url" placeholder="https://…">
+        <small>Link back to the page where the image was found</small>
+      </div>
+
+      <div class="form-group">
+        <label>Post state</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="post-state" value="published" checked>
+            <span>Post now</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="post-state" value="queue">
+            <span>Add to queue</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="post-state" value="draft">
+            <span>Save as draft</span>
+          </label>
+        </div>
+      </div>
+
+      <div id="form-error" class="form-error hidden"></div>
+
+      <div class="form-actions">
+        <button type="button" id="btn-cancel" class="btn-secondary">Cancel</button>
+        <button type="submit" id="btn-submit" class="btn-primary">Share</button>
+      </div>
+
+    </form>
+
+  </div>
+
+  <script src="dialog.js"></script>
+</body>
+</html>

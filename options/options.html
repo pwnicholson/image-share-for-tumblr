@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Share for Tumblr — Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div id="app">
+
+    <header>
+      <div class="header-logo">t</div>
+      <div>
+        <h1>Image Share for Tumblr</h1>
+        <p class="subtitle">Settings</p>
+      </div>
+    </header>
+
+    <main>
+
+      <!-- ── Section: Tumblr Account ── -->
+      <section class="card">
+        <h2>Tumblr Account</h2>
+
+        <div id="auth-status-connected" class="hidden">
+          <div class="status-row">
+            <span class="status-dot connected"></span>
+            <span>Connected as <strong id="connected-username"></strong></span>
+          </div>
+          <div class="blog-list-wrap">
+            <p class="field-label">Your blogs</p>
+            <ul id="blog-list"></ul>
+          </div>
+          <button id="btn-disconnect" class="btn-danger">Disconnect account</button>
+        </div>
+
+        <div id="auth-status-disconnected">
+          <p>Connect your Tumblr account to start sharing images. You'll be taken to Tumblr to authorise the extension — no password is stored here.</p>
+
+          <div class="credentials-form">
+            <p class="field-label">Tumblr OAuth App credentials
+              <a href="https://www.tumblr.com/oauth/apps" target="_blank" rel="noopener noreferrer" class="help-link">
+                Get yours here ↗
+              </a>
+            </p>
+
+            <label for="client-id">Consumer / Client Key</label>
+            <input type="text" id="client-id" placeholder="paste your Consumer Key here" autocomplete="off" spellcheck="false">
+
+            <label for="client-secret">Consumer / Client Secret</label>
+            <input type="password" id="client-secret" placeholder="paste your Consumer Secret here" autocomplete="off">
+
+            <p class="hint">
+              When registering your app on Tumblr, set the <strong>Callback URL</strong> to:<br>
+              <code id="redirect-uri-display"></code>
+            </p>
+
+            <button id="btn-connect" class="btn-primary">Connect to Tumblr</button>
+          </div>
+          <div id="auth-error" class="form-error hidden"></div>
+        </div>
+      </section>
+
+      <!-- ── Section: Default Post Settings ── -->
+      <section class="card">
+        <h2>Default Post Settings</h2>
+        <p class="section-note">These values pre-fill the share dialog each time. You can always override them before posting.</p>
+
+        <div class="form-group">
+          <label for="default-state">Default post state</label>
+          <select id="default-state">
+            <option value="published">Post now</option>
+            <option value="queue">Add to queue</option>
+            <option value="draft">Save as draft</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="default-tags">Default tags <span class="optional">(optional)</span></label>
+          <input type="text" id="default-tags" placeholder="e.g. photography, found on the web">
+          <small>Comma-separated. Added to every post — you can remove them in the dialog.</small>
+        </div>
+      </section>
+
+      <div id="save-status" class="save-status hidden"></div>
+      <div class="form-actions">
+        <button id="btn-save" class="btn-primary" disabled>Save settings</button>
+      </div>
+
+    </main>
+
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
