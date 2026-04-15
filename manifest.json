@@ -1,25 +1,42 @@
 {
   "manifest_version": 3,
   "name": "Image Share for Tumblr",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Right-click any image to share it to your Tumblr blog with caption, tags, and queue support.",
   "permissions": [
     "contextMenus",
     "storage",
-    "identity",
     "scripting",
-    "activeTab"
+    "activeTab",
+    "webNavigation"
   ],
   "host_permissions": [
     "https://api.tumblr.com/*",
-    "https://www.tumblr.com/*"
+    "https://www.tumblr.com/*",
+    "https://strkng.com/*",
+    "https://strkng.net/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": ["content-scripts/suppress-contextmenu.js"],
+      "run_at": "document_start"
+    }
   ],
   "background": {
     "service_worker": "background.js"
   },
+  "icons": {
+    "128": "icons/icon128.png"
+  },
   "action": {
     "default_title": "Image Share for Tumblr — Open Settings",
-    "default_popup": "options/options.html"
+    "default_icon": {
+      "128": "icons/icon128.png"
+    }
   },
   "options_page": "options/options.html",
   "content_security_policy": {

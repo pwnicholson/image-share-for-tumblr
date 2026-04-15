@@ -52,9 +52,20 @@
       </div>
 
       <div class="form-group">
-        <label for="caption-input">Caption <span class="optional">(optional)</span></label>
-        <textarea id="caption-input" rows="4" placeholder="Add a caption…"></textarea>
-        <small>Supports basic HTML (&lt;b&gt;, &lt;i&gt;, &lt;a&gt;, etc.)</small>
+        <label>Caption <span class="optional">(optional)</span></label>
+        <div class="editor-toolbar">
+          <button type="button" class="fmt-btn" id="fmt-bold" title="Bold (Ctrl+B)">B</button>
+          <button type="button" class="fmt-btn fmt-btn-italic" id="fmt-italic" title="Italic (Ctrl+I)">I</button>
+          <div class="fmt-divider"></div>
+          <button type="button" class="fmt-btn" id="fmt-link" title="Create link">Link</button>
+          <button type="button" class="fmt-btn" id="fmt-unlink" title="Remove link">Unlink</button>
+        </div>
+        <div id="caption-input" class="caption-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Caption" data-placeholder="Add a caption…"></div>
+        <div id="link-bar" class="link-bar hidden">
+          <input type="url" id="link-url-input" placeholder="https://…">
+          <button type="button" class="link-bar-btn link-bar-apply" id="link-url-apply">Apply</button>
+          <button type="button" class="link-bar-btn link-bar-cancel" id="link-url-cancel">Cancel</button>
+        </div>
       </div>
 
       <div class="form-group">

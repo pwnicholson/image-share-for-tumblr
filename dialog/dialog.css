@@ -266,3 +266,136 @@ button:disabled {
   color: #fff;
   padding: 10px 24px;
 }
+
+/* ── WYSIWYG caption editor ── */
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #0d0d22;
+  border: 1px solid #2d2d50;
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+  padding: 4px 6px;
+}
+
+.fmt-btn {
+  padding: 3px 9px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #9090b8;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 400;
+  cursor: pointer;
+  transition: color 0.1s, background 0.1s, border-color 0.1s;
+  min-width: 28px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+#fmt-bold     { font-weight: 700; }
+.fmt-btn-italic { font-style: italic; }
+
+.fmt-btn:hover:not(:disabled) {
+  color: #e0e0f0;
+  background: #1e1e3a;
+  border-color: #3d3d66;
+  opacity: 1;
+}
+
+.fmt-btn.active {
+  color: #ff4081;
+  background: rgba(255, 64, 129, 0.12);
+  border-color: rgba(255, 64, 129, 0.3);
+}
+
+.fmt-divider {
+  width: 1px;
+  height: 16px;
+  background: #2d2d50;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.caption-editor {
+  width: 100%;
+  background: #0d0d22;
+  border: 1px solid #2d2d50;
+  border-radius: 0 0 5px 5px;
+  color: #e0e0f0;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  min-height: 88px;
+  max-height: 200px;
+  overflow-y: auto;
+  outline: none;
+  transition: border-color 0.15s;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.caption-editor:focus {
+  border-color: #ff4081;
+}
+
+/* Placeholder text when editor is empty */
+.caption-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #44446a;
+  pointer-events: none;
+  display: block;
+}
+
+/* Style links and basic formatting inside the editor */
+.caption-editor a { color: #79b8ff; text-decoration: underline; }
+.caption-editor b, .caption-editor strong { font-weight: 700; }
+.caption-editor i, .caption-editor em { font-style: italic; }
+
+/* ── Link bar ── */
+
+.link-bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: #0d0d22;
+  border: 1px solid #2d2d50;
+  border-radius: 5px;
+}
+
+.link-bar input[type="url"] {
+  flex: 1;
+  background: #13132a;
+  border: 1px solid #2d2d50;
+  border-radius: 4px;
+  color: #e0e0f0;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.link-bar input[type="url"]:focus {
+  border-color: #ff4081;
+}
+
+.link-bar-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.link-bar-apply  { background: #ff4081; color: #fff; }
+.link-bar-cancel { background: #2a2a48; color: #b0b0cc; }

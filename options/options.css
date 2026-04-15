@@ -10,6 +10,7 @@ body {
   background: #13131f;
   color: #e0e0f0;
   min-height: 100vh;
+  min-width: 560px;
 }
 
 #app {

@@ -52,8 +52,9 @@
             <input type="password" id="client-secret" placeholder="paste your Consumer Secret here" autocomplete="off">
 
             <p class="hint">
-              When registering your app on Tumblr, set the <strong>Callback URL</strong> to:<br>
-              <code id="redirect-uri-display"></code>
+              When registering your app on Tumblr, set both the <strong>Default callback URL</strong>
+              and <strong>OAuth2 redirect_uris</strong> fields to
+              <code>http://localhost:38945/tumblr/callback</code>.
             </p>
 
             <button id="btn-connect" class="btn-primary">Connect to Tumblr</button>

@@ -1,19 +1,67 @@
 'use strict';
 
-// Tumblr OAuth2 PKCE constants
-const TUMBLR_AUTH_URL    = 'https://www.tumblr.com/oauth2/authorize';
-const TUMBLR_TOKEN_URL   = 'https://api.tumblr.com/v2/oauth2/token';
-const TUMBLR_API         = 'https://api.tumblr.com/v2';
-const OAUTH_SCOPES       = 'basic write offline_access';
+// OAuth 1.0a constants
+const TUMBLR_REQUEST_TOKEN = 'https://www.tumblr.com/oauth/request_token';
+const TUMBLR_AUTHORIZE     = 'https://www.tumblr.com/oauth/authorize';
+const TUMBLR_ACCESS_TOKEN  = 'https://www.tumblr.com/oauth/access_token';
+const TUMBLR_API           = 'https://api.tumblr.com/v2';
 
-// The redirect URI Chrome identity API provides for this extension
-const REDIRECT_URI = `https://${chrome.runtime.id}.chromiumapp.org/`;
+// ─────────────────────────────────────────────
+// OAuth 1.0a HMAC-SHA1 helpers
+// ─────────────────────────────────────────────
+
+async function hmacSha1B64(key, data) {
+  const enc = new TextEncoder();
+  const k = await crypto.subtle.importKey(
+    'raw', enc.encode(key), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', k, enc.encode(data));
+  return btoa(String.fromCharCode(...new Uint8Array(sig)));
+}
+
+function pct(v) {
+  return encodeURIComponent(String(v))
+    .replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+}
+
+async function oauthHeader({ method, url, oauthExtra = {}, bodyParams = {}, consumerKey, consumerSecret, token = '', tokenSecret = '' }) {
+  const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+
+  const sigParams = {
+    ...bodyParams,
+    oauth_consumer_key:     consumerKey,
+    oauth_nonce:            nonce,
+    oauth_signature_method: 'HMAC-SHA1',
+    oauth_timestamp:        timestamp,
+    oauth_version:          '1.0',
+    ...(token ? { oauth_token: token } : {}),
+    ...oauthExtra
+  };
+
+  const sortedStr = Object.keys(sigParams).sort()
+    .map(k => `${pct(k)}=${pct(sigParams[k])}`).join('&');
+  const sigBase = [method.toUpperCase(), pct(url.split('?')[0]), pct(sortedStr)].join('&');
+  const signature = await hmacSha1B64(`${pct(consumerSecret)}&${pct(tokenSecret)}`, sigBase);
+
+  const hdrParams = {
+    oauth_consumer_key:     consumerKey,
+    oauth_nonce:            nonce,
+    oauth_signature_method: 'HMAC-SHA1',
+    oauth_timestamp:        timestamp,
+    oauth_version:          '1.0',
+    ...(token ? { oauth_token: token } : {}),
+    ...oauthExtra,
+    oauth_signature:        signature
+  };
+  return 'OAuth ' + Object.keys(hdrParams).sort()
+    .map(k => `${pct(k)}="${pct(hdrParams[k])}"`).join(', ');
+}
 
 // ─────────────────────────────────────────────
 // Page setup
 // ─────────────────────────────────────────────
-
-document.getElementById('redirect-uri-display').textContent = REDIRECT_URI;
 
 // Track whether anything has changed so Save becomes active
 let dirty = false;
@@ -32,19 +80,17 @@ function markDirty() {
 // ─────────────────────────────────────────────
 
 async function init() {
-  const { tumblrTokens, tumblrCredentials, tumblrSettings } = await chrome.storage.local.get([
-    'tumblrTokens',
+  const { tumblrOAuth1Tokens, tumblrCredentials, tumblrSettings } = await chrome.storage.local.get([
+    'tumblrOAuth1Tokens',
     'tumblrCredentials',
     'tumblrSettings'
   ]);
 
-  // Pre-fill credentials inputs if we have them saved (but not yet connected)
   if (tumblrCredentials) {
-    document.getElementById('client-id').value     = tumblrCredentials.clientId     || '';
-    document.getElementById('client-secret').value = tumblrCredentials.clientSecret || '';
+    document.getElementById('client-id').value     = tumblrCredentials.consumerKey    || '';
+    document.getElementById('client-secret').value = tumblrCredentials.consumerSecret || '';
   }
 
-  // Apply saved default settings
   if (tumblrSettings) {
     if (tumblrSettings.defaultState) {
       document.getElementById('default-state').value = tumblrSettings.defaultState;
@@ -54,8 +100,13 @@ async function init() {
     }
   }
 
-  if (tumblrTokens && tumblrTokens.accessToken) {
-    await showConnectedState(tumblrTokens.accessToken);
+  if (tumblrOAuth1Tokens && tumblrOAuth1Tokens.token && tumblrCredentials) {
+    await showConnectedState(
+      tumblrCredentials.consumerKey,
+      tumblrCredentials.consumerSecret,
+      tumblrOAuth1Tokens.token,
+      tumblrOAuth1Tokens.tokenSecret
+    );
   } else {
     showDisconnectedState();
   }
@@ -70,15 +121,15 @@ function showDisconnectedState() {
   document.getElementById('auth-status-disconnected').classList.remove('hidden');
 }
 
-async function showConnectedState(accessToken) {
+async function showConnectedState(consumerKey, consumerSecret, token, tokenSecret) {
   document.getElementById('auth-status-disconnected').classList.add('hidden');
   document.getElementById('auth-status-connected').classList.remove('hidden');
 
   try {
-    const resp = await fetch(`${TUMBLR_API}/user/info`, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    const data = await resp.json();
+    const url    = `${TUMBLR_API}/user/info`;
+    const authHdr = await oauthHeader({ method: 'GET', url, consumerKey, consumerSecret, token, tokenSecret });
+    const resp   = await fetch(url, { headers: { Authorization: authHdr } });
+    const data   = await resp.json();
 
     if (data.meta.status !== 200) throw new Error('API error');
 
@@ -107,45 +158,23 @@ async function showConnectedState(accessToken) {
 }
 
 // ─────────────────────────────────────────────
-// PKCE helpers
-// ─────────────────────────────────────────────
-
-function generateRandomString(length) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  const arr = new Uint8Array(length);
-  crypto.getRandomValues(arr);
-  return Array.from(arr, b => chars[b % chars.length]).join('');
-}
-
-async function sha256Base64Url(plain) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(plain);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-
-// ─────────────────────────────────────────────
-// OAuth connect flow (PKCE)
+// OAuth 1.0a connect flow
 // ─────────────────────────────────────────────
 
 document.getElementById('btn-connect').addEventListener('click', async () => {
-  const clientId     = document.getElementById('client-id').value.trim();
-  const clientSecret = document.getElementById('client-secret').value.trim();
-  const errorEl      = document.getElementById('auth-error');
+  const consumerKey    = document.getElementById('client-id').value.trim();
+  const consumerSecret = document.getElementById('client-secret').value.trim();
+  const errorEl        = document.getElementById('auth-error');
 
   errorEl.classList.add('hidden');
 
-  if (!clientId || !clientSecret) {
-    errorEl.textContent = 'Please enter both your Consumer Key and Consumer Secret.';
+  if (!consumerKey || !consumerSecret) {
+    errorEl.textContent = 'Please enter your Consumer Key and Consumer Secret.';
     errorEl.classList.remove('hidden');
     return;
   }
 
-  // Basic format sanity check — Tumblr keys are alphanumeric, 50 chars typically
-  if (!/^[A-Za-z0-9]{20,}$/.test(clientId)) {
+  if (!/^[A-Za-z0-9]{20,}$/.test(consumerKey)) {
     errorEl.textContent = 'Consumer Key looks invalid. Copy it directly from the Tumblr app registration page.';
     errorEl.classList.remove('hidden');
     return;
@@ -156,73 +185,104 @@ document.getElementById('btn-connect').addEventListener('click', async () => {
   btn.textContent = 'Connecting…';
 
   try {
-    const codeVerifier  = generateRandomString(64);
-    const codeChallenge = await sha256Base64Url(codeVerifier);
-    const state         = generateRandomString(16);
+    const callbackUrl = 'http://localhost:38945/tumblr/callback';
 
-    const params = new URLSearchParams({
-      response_type:         'code',
-      client_id:             clientId,
-      redirect_uri:          REDIRECT_URI,
-      scope:                 OAUTH_SCOPES,
-      code_challenge:        codeChallenge,
-      code_challenge_method: 'S256',
-      state
-    });
-
-    const authUrl = `${TUMBLR_AUTH_URL}?${params}`;
-
-    // chrome.identity.launchWebAuthFlow opens the Tumblr consent screen
-    const responseUrl = await chrome.identity.launchWebAuthFlow({
-      url: authUrl,
-      interactive: true
-    });
-
-    if (!responseUrl) throw new Error('Authentication was cancelled.');
-
-    const responseParams = new URL(responseUrl).searchParams;
-
-    // CSRF check
-    if (responseParams.get('state') !== state) {
-      throw new Error('State mismatch — possible CSRF. Please try again.');
-    }
-
-    const code = responseParams.get('code');
-    if (!code) throw new Error('No authorisation code returned by Tumblr.');
-
-    // Exchange the code for tokens
-    const tokenResp = await fetch(TUMBLR_TOKEN_URL, {
+    // ── Step 1: Get a request token ───────────────────────────────────────────
+    const reqHdr = await oauthHeader({
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type:    'authorization_code',
-        client_id:     clientId,
-        client_secret: clientSecret,
-        redirect_uri:  REDIRECT_URI,
-        code,
-        code_verifier: codeVerifier
-      })
+      url: TUMBLR_REQUEST_TOKEN,
+      oauthExtra: { oauth_callback: callbackUrl },
+      consumerKey, consumerSecret
     });
 
-    const tokenData = await tokenResp.json();
+    const reqResp = await fetch(TUMBLR_REQUEST_TOKEN, {
+      method: 'POST',
+      headers: { Authorization: reqHdr, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `oauth_callback=${encodeURIComponent(callbackUrl)}`
+    });
 
-    if (!tokenData.access_token) {
-      const detail = tokenData.error_description || tokenData.error || 'Unknown error';
-      throw new Error('Token exchange failed: ' + detail);
+    if (!reqResp.ok) {
+      const txt = await reqResp.text().catch(() => String(reqResp.status));
+      throw new Error(`Request token failed (${reqResp.status}): ${String(txt).slice(0, 120)}`);
     }
 
-    const tokens = {
-      accessToken:  tokenData.access_token,
-      refreshToken: tokenData.refresh_token || '',
-      expiresAt:    Date.now() + (tokenData.expires_in || 3600) * 1000
-    };
+    const reqParsed = new URLSearchParams(await reqResp.text());
+    const reqToken  = reqParsed.get('oauth_token');
+    const reqSecret = reqParsed.get('oauth_token_secret');
+
+    if (!reqToken) {
+      throw new Error('No request token returned. Check your Consumer Key and Secret.');
+    }
+
+    // ── Step 2: Let the user authorise on Tumblr ──────────────────────────────
+    const authorizeUrl  = `${TUMBLR_AUTHORIZE}?oauth_token=${encodeURIComponent(reqToken)}`;
+    const redirectedUrl = await new Promise((resolve, reject) => {
+      let authWindowId = null;
+
+      function navListener(details) {
+        if (!details.url.startsWith(callbackUrl)) return;
+        chrome.webNavigation.onBeforeNavigate.removeListener(navListener);
+        chrome.windows.onRemoved.removeListener(removedListener);
+        chrome.windows.remove(authWindowId).catch(() => {});
+        resolve(details.url);
+      }
+
+      function removedListener(windowId) {
+        if (windowId !== authWindowId) return;
+        chrome.webNavigation.onBeforeNavigate.removeListener(navListener);
+        chrome.windows.onRemoved.removeListener(removedListener);
+        reject(new Error('Authentication was cancelled.'));
+      }
+
+      chrome.windows.create(
+        { url: authorizeUrl, type: 'popup', width: 600, height: 700, focused: true },
+        (win) => {
+          if (chrome.runtime.lastError || !win) {
+            reject(new Error('Could not open the authentication window.'));
+            return;
+          }
+          authWindowId = win.id;
+          chrome.webNavigation.onBeforeNavigate.addListener(navListener);
+          chrome.windows.onRemoved.addListener(removedListener);
+        }
+      );
+    });
+
+    const verifier = new URL(redirectedUrl).searchParams.get('oauth_verifier');
+    if (!verifier) throw new Error('No OAuth verifier returned. Please try again.');
+
+    // ── Step 3: Exchange for permanent access token ───────────────────────────
+    const accHdr = await oauthHeader({
+      method: 'POST',
+      url: TUMBLR_ACCESS_TOKEN,
+      oauthExtra: { oauth_verifier: verifier },
+      consumerKey, consumerSecret,
+      token: reqToken, tokenSecret: reqSecret
+    });
+
+    const accResp = await fetch(TUMBLR_ACCESS_TOKEN, {
+      method: 'POST',
+      headers: { Authorization: accHdr, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `oauth_verifier=${encodeURIComponent(verifier)}`
+    });
+
+    if (!accResp.ok) {
+      const txt = await accResp.text().catch(() => String(accResp.status));
+      throw new Error(`Access token failed (${accResp.status}): ${String(txt).slice(0, 120)}`);
+    }
+
+    const accParsed   = new URLSearchParams(await accResp.text());
+    const token       = accParsed.get('oauth_token');
+    const tokenSecret = accParsed.get('oauth_token_secret');
+
+    if (!token) throw new Error('No access token returned by Tumblr.');
 
     await chrome.storage.local.set({
-      tumblrTokens:      tokens,
-      tumblrCredentials: { clientId, clientSecret }
+      tumblrOAuth1Tokens: { token, tokenSecret },
+      tumblrCredentials:  { consumerKey, consumerSecret }
     });
 
-    await showConnectedState(tokens.accessToken);
+    await showConnectedState(consumerKey, consumerSecret, token, tokenSecret);
 
   } catch (err) {
     errorEl.textContent = err.message || 'Authentication failed. Please try again.';
@@ -240,7 +300,7 @@ document.getElementById('btn-connect').addEventListener('click', async () => {
 document.getElementById('btn-disconnect').addEventListener('click', async () => {
   if (!confirm('Disconnect your Tumblr account? Your saved credentials will be removed.')) return;
 
-  await chrome.storage.local.remove(['tumblrTokens', 'tumblrCredentials']);
+  await chrome.storage.local.remove(['tumblrOAuth1Tokens', 'tumblrCredentials']);
   document.getElementById('client-id').value     = '';
   document.getElementById('client-secret').value = '';
   showDisconnectedState();
