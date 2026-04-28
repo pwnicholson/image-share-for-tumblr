@@ -8,6 +8,12 @@ Issues, planned features, and improvements to address in future sessions.
 
 ---
 
+### Misc. Features to Add
+- Allow settings to link certain profiles on common sites (Flickr, 500px, etc) to known Tumblr accounts. User configurable.
+- Warn if the reference link is just to a site's main page and not a photo page (ie flickr.com, flickr explore, or 500px.com)
+
+---
+
 ### Content moderation / safety level
 
 Allow the user to set the content rating of a post before sharing. Like the existing post state (publish/queue/draft), the selected value should be remembered and pre-selected on the next share.
@@ -24,14 +30,6 @@ Allow the user to set the content rating of a post before sharing. Like the exis
 
 **Status: ON HOLD — API not confirmed.**
 The Tumblr v2 API documentation (reviewed April 2026) does not document any content rating or content label parameters for post creation — neither in the legacy `/post` endpoint nor in the NPF `/posts` endpoint. Content label categories (`sexual_themes`, `violence`, `drug_use`) only appear in the Communities API, which is unrelated to individual posts. Implementing this feature would require guessing at undocumented parameters that may silently fail. Do not implement until Tumblr documents these parameters or a reliable source confirms the correct field names.
-
----
-
-### WYSIWYG caption editor ✅ IMPLEMENTED
-
-Replace the current plain-text `<textarea>` (which hints at HTML support) with a proper rich-text editor so users never need to write or read raw HTML.
-
-**Implemented:** `contenteditable` div + `document.execCommand()` — no external dependencies, fully CSP-compliant. Toolbar: **B**, *I*, Link, Unlink. Keyboard shortcuts Ctrl+B / Ctrl+I. Enter inserts `<br>`. Paste strips incoming HTML to plain text. Link bar preserves selection via `Range.cloneRange()`. Auto-populated metadata is converted from plain text via `escapeHtml()` + `\n`→`<br>`. Caption is read back as trimmed innerHTML.
 
 ---
 
